@@ -1,0 +1,6 @@
+**/out
+**/obj_dir
+**/*.vcd
+**/Vtb
+**/*.log
+.DS_Store

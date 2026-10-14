@@ -1,0 +1,20 @@
+# Verilator and simulation outputs
+out/
+Vtb
+*.vcd
+*.fst
+*.log
+
+# Generated binaries and firmware images
+*.bin
+*.elf
+*.hex
+
+# macOS
+.DS_Store
+
+# Editor and temporary files
+.vscode/
+*.swp
+*.swo
+*~
