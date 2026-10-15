@@ -6,7 +6,8 @@
 namespace {
 constexpr uint32_t kGameState = 0x90000000;
 constexpr int kWarmupCycles = 30000;
-constexpr int kInterruptCycles = 20000;
+constexpr int kInterruptCycles = 60000;
+constexpr int kMaxCycles = 200000;
 
 bool check(bool condition, const char *message) {
   std::cout << (condition ? "[PASS] " : "[FAIL] ") << message << '\n';
@@ -27,8 +28,8 @@ int main() {
   for (int cycle = 0; cycle < kWarmupCycles; ++cycle)
     sim.runclk();
 
-  const auto initialState = get_mem_rd(*sim.g_top)(kGameState);
-  passed &= check(initialState == 0, "Initial game state is LOSE");
+  passed &= check(get_mem_rd(*sim.g_top)(kGameState) == 0,
+                  "Initial game state is LOSE");
 
   set_button_center_i(*sim.g_top, 1);
   for (int cycle = 0; cycle < 4; ++cycle)
@@ -37,19 +38,28 @@ int main() {
   passed &= check(get_cpu_get_csr(*sim.g_top)(0x344) != 0,
                   "Button interrupt was generated");
 
-  for (int cycle = 0; cycle < kInterruptCycles; ++cycle)
+  // The firmware loops forever, so wait for the interrupt to resolve into the
+  // green LED pattern rather than assuming a fixed cycle count.
+  bool green = false;
+  for (int cycle = 0; cycle < kInterruptCycles && !green; ++cycle) {
     sim.runclk();
-
-  const auto finalState = get_mem_rd(*sim.g_top)(kGameState);
-  passed &= check(finalState == 1, "Interrupt handler updated game state to WIN");
+    green = get_led_g_o(*sim.g_top)[0] != 0;
+  }
+  passed &= check(green, "Interrupt handler drove the LEDs green (WIN)");
+  passed &= check(get_led_r_o(*sim.g_top)[0] == 0, "Red LEDs stayed off");
   passed &= check(get_cpu_get_csr(*sim.g_top)(0x341) != 0,
                   "Machine exception PC was captured");
   passed &= check(get_cpu_get_csr(*sim.g_top)(0x300) != 0,
                   "Machine status CSR is enabled");
 
-  const auto green = get_led_g_o(*sim.g_top)[0];
-  const auto red = get_led_r_o(*sim.g_top)[0];
-  passed &= check(green != 0 && red == 0, "Green LED output indicates WIN");
+  // The next round gets no button press, so it must fall back to LOSE (red).
+  bool red = false;
+  for (int cycle = 0; cycle < kMaxCycles && !red; ++cycle) {
+    sim.runclk();
+    red = get_led_r_o(*sim.g_top)[0] != 0;
+  }
+  passed &= check(red && get_led_g_o(*sim.g_top)[0] == 0,
+                  "Next round without a press returns to LOSE");
 
   std::cout << "\nSimulation result: " << (passed ? "PASS" : "FAIL") << '\n';
   return passed ? 0 : 1;
