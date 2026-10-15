@@ -1,6 +1,7 @@
 # Verilator and simulation outputs
 out/
 Vtb
+Vplay
 *.vcd
 *.fst
 *.log

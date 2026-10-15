@@ -86,7 +86,12 @@ SMOKE_SOURCES="$(HERE)/"*.v "$(HERE)/"*.sv \
     "$(HERE)/src/base64.cpp" "$(HERE)/src/dapDefines.cpp" \
     "$(HERE)/src/pcToLine.cpp" "$(HERE)/src/smoke.cpp"
 
-.PHONY: clean build_% test smoke_%
+PLAY_SOURCES="$(HERE)/"*.v "$(HERE)/"*.sv \
+    "$(HERE)/src/base64.cpp" "$(HERE)/src/dapDefines.cpp" \
+    "$(HERE)/src/pcToLine.cpp" "$(HERE)/src/play.cpp"
+PLAY_MDIR := obj_play
+
+.PHONY: clean build_% test smoke_% play demo play_%
 
 clean:
 	rm -rf $(OUT_DIR)
@@ -121,3 +126,16 @@ smoke_%: $(OUT_DIR) assembly_%
 
 test: smoke_gecko
 	./Vtb
+
+# Interactive terminal board (needs a TTY: run `make play`, or use `docker run -it`).
+play_%: $(OUT_DIR) assembly_%
+	cd $(OUT_DIR) && verilator $(VERILATOR_FLAGS) -Mdir $(PLAY_MDIR) $(PLAY_SOURCES)
+	rm -f Vplay
+	ln $(OUT_DIR)/$(PLAY_MDIR)/Vtb Vplay
+
+play: play_gecko
+	./Vplay
+
+# Scripted lose -> win walkthrough, safe to run without a TTY (CI-friendly).
+demo: play_gecko
+	./Vplay --demo
