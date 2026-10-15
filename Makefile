@@ -15,7 +15,9 @@ RVOBJCOPY=$(RVTOOLPREFIX)objcopy
 TSCALE  := 1ns/1ns
 OUT_DIR := out
 OUT_MT  ?= 12
-SIM_MT  ?= 4
+# Simulation threads. Pinned to 1: this design is tiny (parallelism buys nothing)
+# and Verilator's --threads has a rare internal "destroy locked Thread Pool" crash.
+SIM_MT  ?= 1
 VERILATOR_EXTRA_FLAGS ?=
 
 # Compiler flags
